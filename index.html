@@ -29,7 +29,7 @@
     margin-bottom: 16px;
   }
   label.q { display: block; font-weight: 600; margin-bottom: 8px; }
-  select, input[type=number], textarea {
+  select, input[type=number], input[type=text], textarea {
     width: 100%;
     padding: 8px;
     border: 1px solid #ccc;
@@ -89,28 +89,22 @@
   }
   .task-row:last-child { border-bottom: none; }
   .task-row label { font-weight: normal; cursor: pointer; }
-  .task-tag {
-    display: inline-block;
-    font-size: 0.72rem;
-    color: #666;
-    background: #eee;
-    border-radius: 4px;
-    padding: 0 6px;
-    margin-left: 6px;
-    white-space: nowrap;
-  }
-  .detail-card {
+  .detail-card, .reason-card {
     border: 1px solid #ddd;
     border-radius: 6px;
     padding: 14px 16px;
     margin-bottom: 12px;
   }
-  .detail-card .task-name { font-weight: 600; margin-bottom: 8px; }
+  .detail-card .task-name, .reason-card .task-name { font-weight: 600; margin-bottom: 8px; }
   .detail-row { margin-bottom: 8px; }
   .detail-row label.small { font-size: 0.85rem; color: #555; display: block; margin-bottom: 4px; }
   .radio-inline { display: flex; gap: 12px; flex-wrap: wrap; }
   .radio-inline label { font-weight: normal; margin-right: 0; }
-  .checkbox-inline label { font-weight: normal; }
+  .reason-options label {
+    display: block;
+    font-weight: normal;
+    padding: 4px 0;
+  }
   .result-box {
     background: #fff;
     border-left: 4px solid #2d6a4f;
@@ -125,13 +119,13 @@
   .score-bar-track { flex: 1; background: #eee; border-radius: 4px; height: 14px; overflow: hidden; }
   .score-bar-fill { height: 100%; background: #52b788; }
   .top-task-row {
-    display: flex;
-    justify-content: space-between;
     padding: 8px 0;
     border-bottom: 1px dashed #ddd;
     font-size: 0.92rem;
   }
   .top-task-row:last-child { border-bottom: none; }
+  .top-task-row .top-task-head { display: flex; justify-content: space-between; }
+  .top-task-row .top-task-reasons { color: #666; font-size: 0.85rem; margin-top: 2px; }
   ul.plain-list { margin: 8px 0; padding-left: 20px; font-size: 0.92rem; }
   .disclaimer {
     font-size: 0.8rem;
@@ -142,6 +136,8 @@
   }
   .progress { font-size: 0.8rem; color: #999; margin-bottom: 8px; }
 </style>
+<script data-goatcounter="https://miyu9999.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 
@@ -160,7 +156,7 @@
 <!-- Screen: Industry -->
 <div class="screen" id="screen-industry">
   <div class="card">
-    <p class="progress">STEP 1 / 5</p>
+    <p class="progress">STEP 1</p>
     <h2>業種を選んでください</h2>
     <div class="choice-list" id="industry-list"></div>
     <div style="margin-top:16px;">
@@ -172,7 +168,7 @@
 <!-- Screen: Role -->
 <div class="screen" id="screen-role">
   <div class="card">
-    <p class="progress">STEP 2 / 5</p>
+    <p class="progress">STEP 2</p>
     <h2>役割を選んでください</h2>
     <div class="choice-list" id="role-list"></div>
     <div style="margin-top:16px;">
@@ -184,7 +180,7 @@
 <!-- Screen: Hours -->
 <div class="screen" id="screen-hours">
   <div class="card">
-    <p class="progress">STEP 3 / 5</p>
+    <p class="progress">STEP 3</p>
     <h2>週の勤務時間を教えてください</h2>
     <p class="sub">契約・シフト上の勤務時間（残業を除く）を数字で入力してください。</p>
     <input type="number" id="input-weekly-hours" min="1" max="168" placeholder="例：20">
@@ -198,7 +194,7 @@
 <!-- Screen: Tasks -->
 <div class="screen" id="screen-tasks">
   <div class="card">
-    <p class="progress">STEP 4 / 5</p>
+    <p class="progress">STEP 4</p>
     <h2>やっている業務にチェックしてください</h2>
     <p class="sub">当てはまるものだけで大丈夫です。抜けている業務があれば結果画面で教えてください。</p>
     <div id="task-categories"></div>
@@ -212,11 +208,25 @@
 <!-- Screen: Details -->
 <div class="screen" id="screen-details">
   <div class="card">
-    <p class="progress">STEP 5 / 5</p>
+    <p class="progress">STEP 5</p>
     <h2>選んだ業務について教えてください</h2>
     <div id="task-details"></div>
     <div style="margin-top:16px;">
       <button class="secondary" onclick="goTo('screen-tasks')">戻る</button>
+      <button onclick="submitDetails()">次へ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Screen: Reasons -->
+<div class="screen" id="screen-reasons">
+  <div class="card">
+    <p class="progress">STEP 6</p>
+    <h2>つらいと感じる理由を教えてください</h2>
+    <p class="sub">「ややつらい」「つらい」と答えた業務だけ表示しています。当てはまるものを複数選べます。</p>
+    <div id="task-reasons"></div>
+    <div style="margin-top:16px;">
+      <button class="secondary" onclick="goTo('screen-details')">戻る</button>
       <button onclick="showResult()">診断結果を見る</button>
     </div>
   </div>
@@ -231,11 +241,12 @@
     <h3>負荷が大きい業務 上位5つ</h3>
     <div id="result-top-tasks"></div>
 
-    <h3>タグ別の内訳</h3>
+    <h3>理由別の内訳</h3>
     <div id="result-tag-breakdown"></div>
 
     <div id="result-overtime"></div>
     <div id="result-duplicate"></div>
+    <div id="result-other"></div>
     <div id="result-workload"></div>
   </div>
   <div style="margin-top:12px;">
@@ -258,21 +269,35 @@ const PAIN_OPTIONS = [
   { value: 'ややつらい', weight: 2 },
   { value: 'つらい', weight: 3 },
 ];
-const TAG_MESSAGE = {
-  '定型': '繰り返し・手作業の業務に負荷が集中しています。自動化やテンプレ化で減らせる可能性が高い領域です。',
+// 共通の理由リスト（v2-spec.md「共通の理由リスト」参照）。category を持たない理由は「その他」で、判定には使わない。
+const REASONS = [
+  { value: '同じ内容を何度も書く・入力する', category: '定型' },
+  { value: '手順が面倒・道具やシステムが使いにくい', category: '定型' },
+  { value: '人や日程の調整が大変・待たされる', category: '調整' },
+  { value: '判断が難しい・迷う', category: '判断' },
+  { value: '人への対応が精神的にしんどい', category: '対人' },
+  { value: '体力的にきつい', category: '身体' },
+  { value: '量が多い・時間が足りない', category: '業務量' },
+  { value: '時間内に終わらず、時間外にやっている', category: '業務量' },
+];
+const CATEGORY_MESSAGE = {
+  '定型': '繰り返し・手作業や、同じ内容を何度も書く業務に負荷が集中しています。自動化やテンプレ化、記録の一元化で減らせる可能性が高い領域です。',
   '調整': '人や日程の調整に負荷が集中しています。連絡や予定の一元管理で減らせる可能性があります。',
   '判断': '専門的な判断が必要な業務に負荷が集中しています。判断材料をそろえる仕組みで負担を軽くできる可能性があります。',
   '対人': '人との関わりそのものに負荷が集中しています。ツールで解決する領域ではないため、職場の上司や専門家への相談をおすすめします。',
   '身体': '体力的な負荷が集中しています。福祉機器の導入や人員配置の見直しが有効な領域です。',
+  '業務量': '個別の業務の性質よりも、業務の絶対量や時間内に終わらないことそのものが負荷になっています。人員配置や業務量そのものの見直しが必要かもしれません。',
 };
+const REASON_OVERTIME = '時間内に終わらず、時間外にやっている';
+const REASON_DUPLICATE = '同じ内容を何度も書く・入力する';
 
 let state = {
   industry: null,
   role: null,
   weeklyHours: null,
-  visibleTasks: [],   // [{ id, name, tag, category }]
+  visibleTasks: [],   // [{ id, name, category }]
   selectedIds: [],     // task ids checked on screen-tasks
-  details: {},          // id -> { time, pain, overtime, duplicate }
+  needsReason: [],     // task ids where pain is 'ややつらい' or 'つらい'
 };
 
 function goTo(id) {
@@ -347,7 +372,7 @@ function buildTaskScreen() {
     html += `<h3>${cat.name}</h3><div>`;
     visibleInCat.forEach(t => {
       const id = 'task-' + (taskCounter++);
-      state.visibleTasks.push({ id, name: t.name, tag: t.tag, category: cat.name });
+      state.visibleTasks.push({ id, name: t.name, category: cat.name });
       html += `
         <div class="task-row">
           <input type="checkbox" id="${id}" value="${id}">
@@ -389,14 +414,41 @@ function buildDetailScreen(checked) {
           `).join('')}
         </div>
       </div>
-      <div class="detail-row checkbox-inline">
-        <label><input type="checkbox" id="${t.id}-overtime"> 勤務時間外にやることがある</label>
-      </div>
-      <div class="detail-row checkbox-inline">
-        <label><input type="checkbox" id="${t.id}-duplicate"> 二度手間だと感じる（同じ内容を別の場所にも書いている等）</label>
-      </div>
     </div>
   `).join('');
+}
+
+function submitDetails() {
+  state.needsReason = state.selectedIds.filter(id => {
+    const painChecked = document.querySelector(`input[name="${id}-pain"]:checked`).value;
+    return painChecked === 'ややつらい' || painChecked === 'つらい';
+  });
+  if (state.needsReason.length === 0) {
+    showResult();
+    return;
+  }
+  buildReasonScreen();
+  goTo('screen-reasons');
+}
+
+function buildReasonScreen() {
+  document.getElementById('task-reasons').innerHTML = state.needsReason.map(id => {
+    const task = state.visibleTasks.find(t => t.id === id);
+    return `
+      <div class="reason-card">
+        <div class="task-name">${task.name}</div>
+        <div class="reason-options">
+          ${REASONS.map((r, i) => `
+            <label><input type="checkbox" id="${id}-reason-${i}" value="${r.value}"> ${r.value}</label>
+          `).join('')}
+        </div>
+        <div class="detail-row" style="margin-top:8px;">
+          <label class="small">その他（自由記述、任意）</label>
+          <input type="text" id="${id}-reason-other" placeholder="上記に当てはまらない理由があれば">
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function showResult() {
@@ -407,34 +459,74 @@ function showResult() {
     const task = state.visibleTasks.find(t => t.id === id);
     const timeValue = document.getElementById(`${id}-time`).value;
     const painChecked = document.querySelector(`input[name="${id}-pain"]:checked`).value;
-    const overtime = document.getElementById(`${id}-overtime`).checked;
-    const duplicate = document.getElementById(`${id}-duplicate`).checked;
     const hours = hoursMap[timeValue];
     const pain = painMap[painChecked];
-    return { ...task, timeValue, hours, painChecked, pain, overtime, duplicate, score: hours * pain };
+
+    let reasons = [];
+    let otherText = '';
+    if (state.needsReason.includes(id)) {
+      reasons = REASONS
+        .map((r, i) => ({ ...r, checked: document.getElementById(`${id}-reason-${i}`).checked }))
+        .filter(r => r.checked)
+        .map(r => r.value);
+      otherText = document.getElementById(`${id}-reason-other`).value.trim();
+    }
+
+    return { ...task, timeValue, hours, painChecked, pain, reasons, otherText, score: hours * pain };
   });
+
+  // バリデーション: 理由が必要な業務で、理由もその他も空の場合は警告
+  const missing = results.find(r => state.needsReason.includes(r.id) && r.reasons.length === 0 && !r.otherText);
+  if (missing) {
+    alert(`「${missing.name}」の理由を1つ以上選ぶか、その他に記入してください`);
+    goTo('screen-reasons');
+    return;
+  }
 
   renderMainMessage(results);
   renderTopTasks(results);
-  renderTagBreakdown(results);
+  renderCategoryBreakdown(results);
   renderOvertimeAndDuplicate(results);
+  renderOther(results);
   renderWorkload(results);
 
   goTo('screen-result');
 }
 
-function renderMainMessage(results) {
-  const tagScores = {};
-  let totalScore = 0;
+function categoryScoresOf(results) {
+  const categoryScores = {};
   results.forEach(r => {
-    tagScores[r.tag] = (tagScores[r.tag] || 0) + r.score;
-    totalScore += r.score;
+    const reasonCount = r.reasons.length;
+    if (reasonCount === 0) return;
+    const perReasonScore = r.score / reasonCount;
+    r.reasons.forEach(value => {
+      const def = REASONS.find(x => x.value === value);
+      if (def) {
+        categoryScores[def.category] = (categoryScores[def.category] || 0) + perReasonScore;
+      }
+    });
   });
-  const topTag = Object.keys(tagScores).reduce((a, b) => tagScores[a] >= tagScores[b] ? a : b);
+  return categoryScores;
+}
 
-  let html = `<div class="result-box"><strong>${topTag}</strong>の業務に負荷が集中しています。<p>${TAG_MESSAGE[topTag]}</p>`;
-  if (topTag === '対人' && totalScore > 0) {
-    const supportable = (tagScores['定型'] || 0) + (tagScores['調整'] || 0);
+function renderMainMessage(results) {
+  const categoryScores = categoryScoresOf(results);
+  const totalScore = Object.values(categoryScores).reduce((a, b) => a + b, 0);
+
+  if (totalScore === 0) {
+    document.getElementById('result-main').innerHTML = `
+      <div class="result-box">
+        <p>大きな負荷が集中している業務は見当たりませんでした。全体的に無理のない範囲に収まっているようです。</p>
+      </div>
+    `;
+    return;
+  }
+
+  const topCategory = Object.keys(categoryScores).reduce((a, b) => categoryScores[a] >= categoryScores[b] ? a : b);
+
+  let html = `<div class="result-box"><strong>${topCategory}</strong>に負荷が集中しています。<p>${CATEGORY_MESSAGE[topCategory]}</p>`;
+  if (topCategory === '対人') {
+    const supportable = (categoryScores['定型'] || 0) + (categoryScores['調整'] || 0);
     if (supportable / totalScore >= 0.2) {
       html += `<p>ただし、定型・調整にあたる部分はツールで減らせる可能性があります。</p>`;
     }
@@ -445,27 +537,35 @@ function renderMainMessage(results) {
 
 function renderTopTasks(results) {
   const top5 = [...results].sort((a, b) => b.score - a.score).slice(0, 5);
-  document.getElementById('result-top-tasks').innerHTML = top5.map(r => `
-    <div class="top-task-row">
-      <span>${r.name}<span class="task-tag">${r.tag}</span></span>
-      <span>${r.timeValue}・${r.painChecked}</span>
-    </div>
-  `).join('');
+  document.getElementById('result-top-tasks').innerHTML = top5.map(r => {
+    const reasonText = r.reasons.length > 0
+      ? [...r.reasons, r.otherText].filter(Boolean).join('・')
+      : (r.otherText || '-');
+    return `
+      <div class="top-task-row">
+        <div class="top-task-head">
+          <span>${r.name}</span>
+          <span>${r.timeValue}・${r.painChecked}</span>
+        </div>
+        <div class="top-task-reasons">理由：${reasonText}</div>
+      </div>
+    `;
+  }).join('');
 }
 
-function renderTagBreakdown(results) {
-  const tagHours = {};
-  let totalHours = 0;
-  results.forEach(r => {
-    tagHours[r.tag] = (tagHours[r.tag] || 0) + r.hours;
-    totalHours += r.hours;
-  });
-  const tags = Object.keys(TAG_MESSAGE).filter(t => tagHours[t]);
-  document.getElementById('result-tag-breakdown').innerHTML = tags.map(t => {
-    const pct = totalHours > 0 ? Math.round((tagHours[t] / totalHours) * 100) : 0;
+function renderCategoryBreakdown(results) {
+  const categoryScores = categoryScoresOf(results);
+  const totalScore = Object.values(categoryScores).reduce((a, b) => a + b, 0);
+  const categories = Object.keys(CATEGORY_MESSAGE).filter(c => categoryScores[c]);
+  if (categories.length === 0) {
+    document.getElementById('result-tag-breakdown').innerHTML = '<p class="sub">理由が選ばれた業務がありませんでした。</p>';
+    return;
+  }
+  document.getElementById('result-tag-breakdown').innerHTML = categories.map(c => {
+    const pct = totalScore > 0 ? Math.round((categoryScores[c] / totalScore) * 100) : 0;
     return `
       <div class="score-bar-row">
-        <div class="score-bar-label">${t}</div>
+        <div class="score-bar-label">${c}</div>
         <div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%"></div></div>
         <div>${pct}%</div>
       </div>
@@ -474,14 +574,13 @@ function renderTagBreakdown(results) {
 }
 
 function renderOvertimeAndDuplicate(results) {
-  const overtimeTasks = results.filter(r => r.overtime);
-  const duplicateTasks = results.filter(r => r.duplicate);
+  const overtimeTasks = results.filter(r => r.reasons.includes(REASON_OVERTIME));
+  const duplicateTasks = results.filter(r => r.reasons.includes(REASON_DUPLICATE));
 
   let overtimeHtml = '';
   if (overtimeTasks.length > 0) {
-    const totalOvertimeHours = overtimeTasks.reduce((sum, r) => sum + r.hours, 0);
     overtimeHtml = `
-      <h3>勤務時間外の業務</h3>
+      <h3>時間内に終わらず、時間外にやっている業務</h3>
       <div class="result-box warn">
         <p>勤務時間外の作業は、本来は労働時間として扱われるべきものです。</p>
         <ul class="plain-list">${overtimeTasks.map(r => `<li>${r.name}（週あたり目安 ${r.hours}時間）</li>`).join('')}</ul>
@@ -493,7 +592,7 @@ function renderOvertimeAndDuplicate(results) {
   let duplicateHtml = '';
   if (duplicateTasks.length > 0) {
     duplicateHtml = `
-      <h3>二度手間だと感じている業務</h3>
+      <h3>同じ内容を何度も書く・入力すると感じている業務</h3>
       <div class="result-box note">
         <p>記録の一元化で減らせる可能性があります。</p>
         <ul class="plain-list">${duplicateTasks.map(r => `<li>${r.name}</li>`).join('')}</ul>
@@ -501,6 +600,20 @@ function renderOvertimeAndDuplicate(results) {
     `;
   }
   document.getElementById('result-duplicate').innerHTML = duplicateHtml;
+}
+
+function renderOther(results) {
+  const otherTasks = results.filter(r => r.otherText);
+  let html = '';
+  if (otherTasks.length > 0) {
+    html = `
+      <h3>その他の理由（自由記述）</h3>
+      <div class="result-box note">
+        <ul class="plain-list">${otherTasks.map(r => `<li>${r.name}：${r.otherText}</li>`).join('')}</ul>
+      </div>
+    `;
+  }
+  document.getElementById('result-other').innerHTML = html;
 }
 
 function renderWorkload(results) {
@@ -517,7 +630,7 @@ function renderWorkload(results) {
 }
 
 function restart() {
-  state = { industry: null, role: null, weeklyHours: null, visibleTasks: [], selectedIds: [], details: {} };
+  state = { industry: null, role: null, weeklyHours: null, visibleTasks: [], selectedIds: [], needsReason: [] };
   document.getElementById('input-weekly-hours').value = '';
   goTo('screen-intro');
 }
