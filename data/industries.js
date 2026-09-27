@@ -20,6 +20,7 @@ const INDUSTRIES = [
   {
     id: "doctor",
     name: "医師",
+    icon: "🩺",
     beta: true,
     roles: [
       { id: "resident", name: "研修医" },
@@ -138,6 +139,7 @@ const INDUSTRIES = [
   {
     id: "nurse",
     name: "看護師",
+    icon: "💉",
     beta: true,
     roles: [
       { id: "staff", name: "スタッフ" },
@@ -206,6 +208,7 @@ const INDUSTRIES = [
   {
     id: "teacher",
     name: "教員・講師",
+    icon: "📚",
     beta: true,
     roles: [
       { id: "school", name: "学校教員" },
@@ -320,6 +323,7 @@ const INDUSTRIES = [
   {
     id: "engineer",
     name: "ITエンジニア",
+    icon: "💻",
     beta: true,
     roles: [
       { id: "member", name: "メンバー" },
@@ -378,6 +382,7 @@ const INDUSTRIES = [
   {
     id: "childcare",
     name: "保育士",
+    icon: "🧸",
     beta: true,
     roles: [
       { id: "staff", name: "スタッフ" },
@@ -444,6 +449,7 @@ const INDUSTRIES = [
   {
     id: "office",
     name: "一般事務",
+    icon: "🗂️",
     beta: true,
     roles: [
       { id: "staff", name: "スタッフ" },
@@ -505,6 +511,7 @@ const INDUSTRIES = [
   {
     id: "retail",
     name: "小売（店舗販売）",
+    icon: "🛒",
     beta: true,
     roles: [
       { id: "staff", name: "スタッフ" },
@@ -562,6 +569,7 @@ const INDUSTRIES = [
   {
     id: "sales",
     name: "営業",
+    icon: "💼",
     beta: true,
     roles: [
       { id: "member", name: "メンバー" },
@@ -624,6 +632,7 @@ const INDUSTRIES = [
   {
     id: "restaurant",
     name: "飲食店",
+    icon: "🍽️",
     beta: true,
     roles: [
       { id: "hall", name: "ホール" },
@@ -680,6 +689,7 @@ const INDUSTRIES = [
   {
     id: "care",
     name: "介護職（施設）",
+    icon: "🤝",
     beta: true,
     roles: [
       { id: "staff", name: "スタッフ" },
@@ -744,6 +754,7 @@ const INDUSTRIES = [
   {
     id: "manufacturing",
     name: "製造（工場ライン）",
+    icon: "🏭",
     beta: true,
     roles: [
       { id: "staff", name: "作業者" },
@@ -805,6 +816,7 @@ const INDUSTRIES = [
   {
     id: "driver",
     name: "ドライバー（配送・トラック）",
+    icon: "🚚",
     beta: true,
     roles: [
       { id: "driver", name: "ドライバー" },
@@ -866,6 +878,7 @@ const INDUSTRIES = [
   {
     id: "construction",
     name: "建設・現場作業",
+    icon: "🏗️",
     beta: true,
     roles: [
       { id: "staff", name: "作業者" },
@@ -919,6 +932,7 @@ const INDUSTRIES = [
   {
     id: "logistics",
     name: "物流・倉庫",
+    icon: "📦",
     beta: true,
     roles: [
       { id: "staff", name: "作業者" },
