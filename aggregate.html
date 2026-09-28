@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>シゴト健診 - 職場集計</title>
+<link rel="stylesheet" href="styles.css">
+<script data-goatcounter="https://miyu9999.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<h1><span class="logo-mark">🩺</span>シゴト健診</h1>
+<p class="sub">職場みんなの結果コードをまとめて貼り付けると、改善すべき問題に優先度をつけて表示します。</p>
+
+<div class="card">
+  <p>メンバーから届いた結果コードを、1行に1つずつ貼り付けてください。ここに貼った内容はどこにも送信・保存されません（ページを閉じると消えます）。</p>
+  <textarea id="code-input" rows="8" placeholder="SK1-....&#10;SK1-....&#10;SK1-...."></textarea>
+  <button onclick="runAggregate()">集計する</button>
+</div>
+
+<div id="agg-errors"></div>
+<div id="agg-need-more"></div>
+
+<div class="card" id="agg-result-card" style="display:none;">
+  <h2 id="agg-industry-name">集計結果</h2>
+  <p class="sub" id="agg-response-count"></p>
+
+  <h3>改善候補ランキング（負荷が大きい順）</h3>
+  <div id="agg-ranking"></div>
+
+  <h3>理由別の内訳</h3>
+  <div id="agg-category-breakdown"></div>
+
+  <div id="agg-overtime"></div>
+  <div id="agg-workload"></div>
+</div>
+<p class="disclaimer" id="agg-disclaimer" style="display:none;">
+  この集計は簡易的な参考情報です。コードを送ってくれた人が誰かは、送られた側にはわかる場合があります。個別のコードを見て「誰の回答か」を詮索しないようにしてください。5人分未満のコードでは結果を表示しません。
+</p>
+
+<script src="data/industries.js"></script>
+<script src="data/shared.js"></script>
+<script>
+function runAggregate() {
+  const raw = document.getElementById('code-input').value;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+
+  document.getElementById('agg-result-card').style.display = 'none';
+  document.getElementById('agg-disclaimer').style.display = 'none';
+  document.getElementById('agg-need-more').innerHTML = '';
+
+  if (lines.length === 0) {
+    document.getElementById('agg-errors').innerHTML = '<div class="result-box note"><p>コードを貼り付けてください。</p></div>';
+    return;
+  }
+
+  const parsed = [];
+  let unreadable = 0;
+  lines.forEach(line => {
+    const p = parseResultCode(line);
+    if (!p) { unreadable++; return; }
+    parsed.push({ raw: line, payload: p });
+  });
+
+  if (parsed.length === 0) {
+    renderErrors({ unreadable, wrongIndustry: 0, wrongVersion: 0, duplicateCount: 0 });
+    return;
+  }
+
+  const industryId = parsed[0].payload.i;
+  const industry = INDUSTRIES.find(i => i.id === industryId);
+
+  let wrongIndustry = 0;
+  let wrongVersion = 0;
+  const versionOk = [];
+  parsed.forEach(p => {
+    if (p.payload.i !== industryId) { wrongIndustry++; return; }
+    if (p.payload.d !== DATA_VERSION) { wrongVersion++; return; }
+    versionOk.push(p);
+  });
+
+  const seen = new Set();
+  let duplicateCount = 0;
+  versionOk.forEach(p => {
+    if (seen.has(p.raw)) duplicateCount++;
+    seen.add(p.raw);
+  });
+
+  renderErrors({ unreadable, wrongIndustry, wrongVersion, duplicateCount });
+
+  if (versionOk.length < MIN_AGGREGATE_RESPONSES) {
+    document.getElementById('agg-need-more').innerHTML = `
+      <div class="result-box">
+        <p>集計には${MIN_AGGREGATE_RESPONSES}人分以上のコードが必要です（あと${MIN_AGGREGATE_RESPONSES - versionOk.length}人分）。</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (!industry) {
+    document.getElementById('agg-errors').innerHTML = '<div class="result-box warn"><p>このコードの業種データが見つかりませんでした。業務リストが更新されている可能性があります。</p></div>';
+    return;
+  }
+
+  renderAggregateResult(industry, versionOk);
+  document.getElementById('agg-result-card').style.display = 'block';
+  document.getElementById('agg-disclaimer').style.display = 'block';
+}
+
+function renderErrors({ unreadable, wrongIndustry, wrongVersion, duplicateCount }) {
+  const messages = [];
+  if (unreadable > 0) messages.push(`読み取れないコードが${unreadable}件ありました。`);
+  if (wrongIndustry > 0) messages.push(`最初のコードと業種が異なるコードが${wrongIndustry}件あり、除外しました。`);
+  if (wrongVersion > 0) messages.push(`古い版のコードが${wrongVersion}件あり、除外しました。もう一度診断してもらってください。`);
+  if (duplicateCount > 0) messages.push(`同じコードが${duplicateCount}件重複していました。二重に貼っていないか確認してください。`);
+  document.getElementById('agg-errors').innerHTML = messages.length > 0
+    ? `<div class="result-box note"><ul class="plain-list">${messages.map(m => `<li>${m}</li>`).join('')}</ul></div>`
+    : '';
+}
+
+function renderAggregateResult(industry, responses) {
+  const flatTasks = getFlatTasks(industry);
+  const hoursByIndex = HOURS_OPTIONS.map(h => h.hours);
+  const painByIndex = PAIN_OPTIONS.map(p => p.weight);
+
+  const comboScores = {}; // `${taskIndex}|${reasonIndex}` -> { score, count, taskIndex, reasonIndex }
+  const categoryScores = {};
+  const overtimeCounts = {};
+  let overWorkloadCount = 0;
+
+  responses.forEach(r => {
+    const payload = r.payload;
+    if (payload.o) overWorkloadCount++;
+    payload.t.forEach(entry => {
+      const [taskIndex, timeIndex, painIndex, reasonBits] = entry;
+      const hours = hoursByIndex[timeIndex];
+      const pain = painByIndex[painIndex];
+      if (hours === undefined || pain === undefined) return;
+      const score = hours * pain;
+
+      const reasonIndices = [];
+      for (let i = 0; i < REASONS.length; i++) {
+        if (reasonBits & (1 << i)) reasonIndices.push(i);
+      }
+      if (reasonIndices.length === 0) return;
+
+      const perReasonScore = score / reasonIndices.length;
+      reasonIndices.forEach(ri => {
+        const reason = REASONS[ri];
+        const key = taskIndex + '|' + ri;
+        if (!comboScores[key]) comboScores[key] = { score: 0, count: 0, taskIndex, reasonIndex: ri };
+        comboScores[key].score += perReasonScore;
+        comboScores[key].count += 1;
+
+        categoryScores[reason.category] = (categoryScores[reason.category] || 0) + perReasonScore;
+
+        if (reason.value === REASON_OVERTIME) {
+          overtimeCounts[taskIndex] = (overtimeCounts[taskIndex] || 0) + 1;
+        }
+      });
+    });
+  });
+
+  document.getElementById('agg-industry-name').textContent = industry.name + 'の集計結果';
+  document.getElementById('agg-response-count').textContent = `回答人数：${responses.length}人`;
+
+  renderRanking(comboScores, flatTasks, responses.length);
+  renderCategoryBreakdown(categoryScores);
+  renderOvertimeRanking(overtimeCounts, flatTasks, responses.length);
+  renderWorkloadSummary(overWorkloadCount, responses.length);
+}
+
+function renderRanking(comboScores, flatTasks, totalResponses) {
+  const ranking = Object.values(comboScores).sort((a, b) => b.score - a.score).slice(0, 10);
+  const container = document.getElementById('agg-ranking');
+  if (ranking.length === 0) {
+    container.innerHTML = '<p class="sub">集計できる負荷が見当たりませんでした。</p>';
+    return;
+  }
+  container.innerHTML = ranking.map((r, i) => {
+    const task = flatTasks[r.taskIndex];
+    const reason = REASONS[r.reasonIndex];
+    return `
+      <div class="rank-row">
+        <div class="rank-number">${i + 1}</div>
+        <div class="rank-body">
+          <div class="rank-title">${task ? task.name : '(不明な業務)'} × ${reason.value}</div>
+          <div class="rank-sub">${totalResponses}人中${r.count}人<span class="count-badge">${reason.category}</span></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderCategoryBreakdown(categoryScores) {
+  const totalScore = Object.values(categoryScores).reduce((a, b) => a + b, 0);
+  const categories = Object.keys(CATEGORY_MESSAGE).filter(c => categoryScores[c]);
+  const container = document.getElementById('agg-category-breakdown');
+  if (categories.length === 0) {
+    container.innerHTML = '<p class="sub">理由が選ばれた回答がありませんでした。</p>';
+    return;
+  }
+  container.innerHTML = categories.map(c => {
+    const pct = totalScore > 0 ? Math.round((categoryScores[c] / totalScore) * 100) : 0;
+    return `
+      <div class="score-bar-row">
+        <div class="score-bar-label">${c}</div>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%;background:${CATEGORY_COLOR[c]}"></div></div>
+        <div class="score-bar-pct">${pct}%</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderOvertimeRanking(overtimeCounts, flatTasks, totalResponses) {
+  const entries = Object.entries(overtimeCounts).sort((a, b) => b[1] - a[1]);
+  const container = document.getElementById('agg-overtime');
+  if (entries.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = `
+    <h3>「時間内に終わらず、時間外にやっている」と答えた人が多い業務</h3>
+    <div class="result-box warn">
+      <ul class="plain-list">
+        ${entries.map(([taskIndex, count]) => `<li>${flatTasks[taskIndex] ? flatTasks[taskIndex].name : '(不明な業務)'}（${totalResponses}人中${count}人）</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function renderWorkloadSummary(overWorkloadCount, totalResponses) {
+  document.getElementById('agg-workload').innerHTML = `
+    <h3>業務量</h3>
+    <div class="result-box${overWorkloadCount > 0 ? ' warn' : ''}">
+      <p>記入した業務の合計が勤務時間を超えている人：${totalResponses}人中${overWorkloadCount}人</p>
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>

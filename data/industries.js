@@ -4,6 +4,11 @@
 // category.roles / task.roles を省略した場合は全ロール共通
 // task.roles は category.roles のサブセットとして指定する
 
+// v2.1 職場集計の結果コードに使うバージョン番号。
+// 業務の追加・削除・並び替え（COMMON_CATEGORY・INDUSTRIESどちらも）をしたら必ず上げる。
+// 古い版のコードは集計ページで「古い版のコードです」として除外される。
+const DATA_VERSION = 1;
+
 const COMMON_CATEGORY = {
   name: "共通（どの仕事にもある業務）",
   tasks: [

@@ -4,185 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>シゴト健診</title>
-<style>
-  :root {
-    --color-primary: #2d6a4f;
-    --color-primary-dark: #1b4332;
-    --color-primary-light: #eef7f1;
-    --color-accent: #52b788;
-    --color-bg: #f6f8f7;
-    --color-card: #ffffff;
-    --color-border: #e3e7e4;
-    --color-text: #1f2421;
-    --color-text-sub: #66746c;
-    --color-warn: #bf6900;
-    --color-warn-bg: #fff4e6;
-  }
-  * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 28px 16px 64px;
-    line-height: 1.7;
-    color: var(--color-text);
-    background: var(--color-bg);
-  }
-  h1 {
-    font-size: 1.5rem;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  h1 .logo-mark { font-size: 1.3rem; }
-  h2 { font-size: 1.15rem; margin-bottom: 4px; }
-  h3 { font-size: 1rem; margin: 22px 0 10px; color: var(--color-primary); }
-  .sub { color: var(--color-text-sub); font-size: 0.9rem; margin-bottom: 24px; }
-  .screen { display: none; }
-  .screen.active { display: block; }
-  .card {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 14px;
-    padding: 22px 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 2px rgba(27, 67, 50, 0.04), 0 8px 20px rgba(27, 67, 50, 0.06);
-  }
-  label.q { display: block; font-weight: 600; margin-bottom: 8px; }
-  select, input[type=number], input[type=text], textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #cfd6d1;
-    border-radius: 8px;
-    font-size: 1rem;
-    margin-bottom: 4px;
-    background: #fff;
-    color: var(--color-text);
-  }
-  select:focus, input:focus, textarea:focus {
-    outline: none;
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.18);
-  }
-  textarea { resize: vertical; min-height: 60px; }
-  button {
-    background: var(--color-primary);
-    color: #fff;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: background 0.15s ease, transform 0.05s ease;
-  }
-  button:hover { background: var(--color-primary-dark); }
-  button:active { transform: scale(0.98); }
-  button:disabled { background: #ccc; cursor: not-allowed; }
-  button.secondary {
-    background: transparent;
-    color: var(--color-primary);
-    border: 1px solid var(--color-primary);
-    margin-right: 8px;
-  }
-  button.secondary:hover { background: var(--color-primary-light); }
-  .choice-list { display: flex; flex-direction: column; gap: 10px; }
-  .choice-btn {
-    background: #fff;
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    text-align: left;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
-  }
-  .choice-btn:hover { border-color: var(--color-accent); background: var(--color-primary-light); }
-  .choice-btn:active { transform: scale(0.99); }
-  .choice-icon { font-size: 1.3rem; flex-shrink: 0; width: 28px; text-align: center; }
-  .choice-label { flex: 1; }
-  .beta-tag {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: var(--color-warn);
-    background: var(--color-warn-bg);
-    border-radius: 999px;
-    padding: 2px 8px;
-    margin-left: 4px;
-    flex-shrink: 0;
-    letter-spacing: 0.02em;
-  }
-  .task-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid #eef0ee;
-  }
-  .task-row:last-child { border-bottom: none; }
-  .task-row label { font-weight: normal; cursor: pointer; }
-  .task-row input[type=checkbox] { margin-top: 3px; accent-color: var(--color-primary); }
-  .detail-card, .reason-card {
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 12px;
-    background: #fcfdfc;
-  }
-  .detail-card .task-name, .reason-card .task-name { font-weight: 700; margin-bottom: 10px; }
-  .detail-row { margin-bottom: 8px; }
-  .detail-row label.small { font-size: 0.85rem; color: var(--color-text-sub); display: block; margin-bottom: 4px; }
-  .radio-inline { display: flex; gap: 14px; flex-wrap: wrap; }
-  .radio-inline label { font-weight: normal; margin-right: 0; }
-  .radio-inline input[type=radio] { accent-color: var(--color-primary); }
-  .reason-options label {
-    display: block;
-    font-weight: normal;
-    padding: 5px 0;
-  }
-  .reason-options input[type=checkbox] { accent-color: var(--color-primary); margin-right: 4px; }
-  .result-box {
-    background: #fff;
-    border-left: 4px solid var(--color-primary);
-    padding: 16px 20px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-  }
-  .result-box.warn { border-left-color: var(--color-warn); background: var(--color-warn-bg); }
-  .result-box.note { border-left-color: #999; }
-  .score-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 0.9rem; }
-  .score-bar-label { width: 60px; flex-shrink: 0; font-weight: 600; }
-  .score-bar-track { flex: 1; background: #eef0ee; border-radius: 999px; height: 12px; overflow: hidden; }
-  .score-bar-fill { height: 100%; border-radius: 999px; background: var(--color-accent); }
-  .score-bar-pct { width: 36px; text-align: right; flex-shrink: 0; color: var(--color-text-sub); }
-  .top-task-row {
-    padding: 10px 0;
-    border-bottom: 1px dashed var(--color-border);
-    font-size: 0.92rem;
-  }
-  .top-task-row:last-child { border-bottom: none; }
-  .top-task-row .top-task-head { display: flex; justify-content: space-between; font-weight: 600; }
-  .top-task-row .top-task-reasons { color: var(--color-text-sub); font-size: 0.85rem; margin-top: 3px; }
-  ul.plain-list { margin: 8px 0; padding-left: 20px; font-size: 0.92rem; }
-  .disclaimer {
-    font-size: 0.8rem;
-    color: #8b968f;
-    margin-top: 32px;
-    border-top: 1px solid var(--color-border);
-    padding-top: 12px;
-  }
-  .step-dots { display: flex; gap: 6px; margin-bottom: 14px; }
-  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: #dfe5e1; transition: background 0.15s ease, transform 0.15s ease; }
-  .step-dot.done { background: var(--color-accent); }
-  .step-dot.current { background: var(--color-primary); transform: scale(1.35); }
-</style>
+<link rel="stylesheet" href="styles.css">
 <script data-goatcounter="https://miyu9999.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -295,6 +117,14 @@
     <div id="result-duplicate"></div>
     <div id="result-other"></div>
     <div id="result-workload"></div>
+
+    <h3>職場で集計する</h3>
+    <div class="result-box note">
+      <p>下のコードを、集計する人（店長・教室長など）にLINEやSlackなどで送ってください。集計する人は<a href="aggregate.html" target="_blank" rel="noopener">集計ページ</a>にみんなのコードをまとめて貼り付けると、職場全体の結果が見られます。</p>
+      <p style="font-size:0.85rem;color:var(--color-text-sub);">コードだけでは名前はわかりませんが、送り先の人には「誰から届いたコードか」はわかります。それでもよければ送ってください。自由記述・役割・勤務時間の具体的な時間はコードに含まれません。</p>
+      <textarea id="result-code" readonly style="font-size:0.8rem; min-height:70px;"></textarea>
+      <button class="secondary" onclick="copyResultCode()" style="margin-top:4px;">コードをコピー</button>
+    </div>
   </div>
   <div style="margin-top:12px;">
     <button class="secondary" onclick="restart()">最初からやり直す</button>
@@ -303,48 +133,8 @@
 </div>
 
 <script src="data/industries.js"></script>
+<script src="data/shared.js"></script>
 <script>
-const HOURS_OPTIONS = [
-  { value: '30分未満', hours: 0.25 },
-  { value: '30分〜1時間', hours: 0.75 },
-  { value: '1〜3時間', hours: 2 },
-  { value: '3〜5時間', hours: 4 },
-  { value: '5時間以上', hours: 6 },
-];
-const PAIN_OPTIONS = [
-  { value: 'あまりつらくない', weight: 1 },
-  { value: 'ややつらい', weight: 2 },
-  { value: 'つらい', weight: 3 },
-];
-// 共通の理由リスト（v2-spec.md「共通の理由リスト」参照）。category を持たない理由は「その他」で、判定には使わない。
-const REASONS = [
-  { value: '同じ内容を何度も書く・入力する', category: '定型' },
-  { value: '手順が面倒・道具やシステムが使いにくい', category: '定型' },
-  { value: '人や日程の調整が大変・待たされる', category: '調整' },
-  { value: '判断が難しい・迷う', category: '判断' },
-  { value: '人への対応が精神的にしんどい', category: '対人' },
-  { value: '体力的にきつい', category: '身体' },
-  { value: '量が多い・時間が足りない', category: '業務量' },
-  { value: '時間内に終わらず、時間外にやっている', category: '業務量' },
-];
-const CATEGORY_MESSAGE = {
-  '定型': '繰り返し・手作業や、同じ内容を何度も書く業務に負荷が集中しています。自動化やテンプレ化、記録の一元化で減らせる可能性が高い領域です。',
-  '調整': '人や日程の調整に負荷が集中しています。連絡や予定の一元管理で減らせる可能性があります。',
-  '判断': '専門的な判断が必要な業務に負荷が集中しています。判断材料をそろえる仕組みで負担を軽くできる可能性があります。',
-  '対人': '人との関わりそのものに負荷が集中しています。ツールで解決する領域ではないため、職場の上司や専門家への相談をおすすめします。',
-  '身体': '体力的な負荷が集中しています。福祉機器の導入や人員配置の見直しが有効な領域です。',
-  '業務量': '個別の業務の性質よりも、業務の絶対量や時間内に終わらないことそのものが負荷になっています。人員配置や業務量そのものの見直しが必要かもしれません。',
-};
-const CATEGORY_COLOR = {
-  '定型': '#52b788',
-  '調整': '#4a90a4',
-  '判断': '#7c6bb0',
-  '対人': '#e07a5f',
-  '身体': '#d4a24c',
-  '業務量': '#bf6900',
-};
-const REASON_OVERTIME = '時間内に終わらず、時間外にやっている';
-const REASON_DUPLICATE = '同じ内容を何度も書く・入力する';
 const TOTAL_STEPS = 6;
 
 let state = {
@@ -432,6 +222,7 @@ function taskAllowedForRole(item) {
 }
 
 function buildTaskScreen() {
+  const flatTasks = getFlatTasks(state.industry);
   const categories = [...state.industry.categories, COMMON_CATEGORY];
   state.visibleTasks = [];
   let html = '';
@@ -443,7 +234,8 @@ function buildTaskScreen() {
     html += `<h3>${cat.name}</h3><div>`;
     visibleInCat.forEach(t => {
       const id = 'task-' + (taskCounter++);
-      state.visibleTasks.push({ id, name: t.name, category: cat.name });
+      const flatIndex = flatTasks.indexOf(t);
+      state.visibleTasks.push({ id, name: t.name, category: cat.name, flatIndex });
       html += `
         <div class="task-row">
           <input type="checkbox" id="${id}" value="${id}">
@@ -560,8 +352,26 @@ function showResult() {
   renderOvertimeAndDuplicate(results);
   renderOther(results);
   renderWorkload(results);
+  renderResultCode(results);
 
   goTo('screen-result');
+}
+
+function renderResultCode(results) {
+  const totalHours = results.reduce((sum, r) => sum + r.hours, 0);
+  const overWorkload = totalHours > state.weeklyHours;
+  const code = buildResultCode(state.industry.id, results, overWorkload);
+  document.getElementById('result-code').value = code;
+}
+
+function copyResultCode() {
+  const textarea = document.getElementById('result-code');
+  textarea.select();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(textarea.value).catch(() => {});
+  } else {
+    document.execCommand('copy');
+  }
 }
 
 function categoryScoresOf(results) {

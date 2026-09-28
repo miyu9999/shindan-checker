@@ -214,6 +214,141 @@ const path = require('path');
     check('理由別内訳に「身体」が50%で出る', /身体[\s\S]{0,20}50%/.test(breakdownText));
   }
 
+  // --- Scenario 10: 個人結果コード→職場集計（5人分そろうと結果が出る） ---
+  console.log('--- Scenario 10: 5人分のコードで集計結果が出る、4人分では出ない ---');
+  const codes = [];
+  for (let i = 0; i < 5; i++) {
+    await runToTasks('retail', 'staff');
+    await proceedThroughDetails(20, ['レジ対応・会計'], async () => {
+      await setDetail('レジ対応・会計', { time: '1〜3時間', pain: 'つらい' });
+    });
+    await setReasons('レジ対応・会計', [REASON('判断が難しい・迷う')]);
+    await page.click('#screen-reasons button:last-child');
+    codes.push(await page.$eval('#result-code', el => el.value));
+  }
+
+  const aggUrl = 'file://' + path.resolve(__dirname, 'aggregate.html');
+  await page.goto(aggUrl, { waitUntil: 'load' });
+  await page.type('#code-input', codes.slice(0, 4).join('\n'));
+  await page.click('.card button');
+  {
+    const needMoreText = await page.$eval('#agg-need-more', el => el.innerText);
+    check('4人分では「あと1人分必要」と出る', needMoreText.includes('あと1人分'));
+    const display = await page.$eval('#agg-result-card', el => el.style.display);
+    check('4人分では結果カードが表示されない', display !== 'block');
+  }
+
+  await page.goto(aggUrl, { waitUntil: 'load' });
+  await page.type('#code-input', codes.join('\n'));
+  await page.click('.card button');
+  {
+    const display = await page.$eval('#agg-result-card', el => el.style.display);
+    check('5人分で結果カードが表示される', display === 'block');
+    const countText = await page.$eval('#agg-response-count', el => el.innerText);
+    check('回答人数が5人と表示される', countText.includes('5人'));
+    const rankingText = await page.$eval('#agg-ranking', el => el.innerText);
+    check('ランキングに「レジ対応・会計」×「判断が難しい・迷う」が出る',
+      rankingText.includes('レジ対応・会計') && rankingText.includes('判断が難しい・迷う'));
+  }
+
+  // --- Scenario 11: ランキングが優先度スコアの高い順に並ぶ ---
+  console.log('--- Scenario 11: ランキングが優先度スコア順に並ぶ ---');
+  const highScoreCodes = [];
+  for (let i = 0; i < 5; i++) {
+    await runToTasks('retail', 'staff');
+    await proceedThroughDetails(20, ['クレーム・返品対応'], async () => {
+      await setDetail('クレーム・返品対応', { time: '5時間以上', pain: 'つらい' });
+    });
+    await setReasons('クレーム・返品対応', [REASON('人への対応が精神的にしんどい')]);
+    await page.click('#screen-reasons button:last-child');
+    highScoreCodes.push(await page.$eval('#result-code', el => el.value));
+  }
+  const lowScoreCodes = [];
+  for (let i = 0; i < 2; i++) {
+    await runToTasks('retail', 'staff');
+    await proceedThroughDetails(20, ['品出し・陳列'], async () => {
+      await setDetail('品出し・陳列', { time: '30分未満', pain: 'ややつらい' });
+    });
+    await setReasons('品出し・陳列', [REASON('体力的にきつい')]);
+    await page.click('#screen-reasons button:last-child');
+    lowScoreCodes.push(await page.$eval('#result-code', el => el.value));
+  }
+  await page.goto(aggUrl, { waitUntil: 'load' });
+  await page.type('#code-input', [...highScoreCodes, ...lowScoreCodes].join('\n'));
+  await page.click('.card button');
+  {
+    const firstRankTitle = await page.$eval('#agg-ranking .rank-row:first-child .rank-title', el => el.innerText);
+    check('1位が「クレーム・返品対応 × 人への対応が精神的にしんどい」',
+      firstRankTitle.includes('クレーム・返品対応') && firstRankTitle.includes('人への対応が精神的にしんどい'));
+  }
+
+  // --- Scenario 12: コードに自由記述・勤務時間が含まれない ---
+  console.log('--- Scenario 12: コードに自由記述・勤務時間の具体的な数字が含まれない ---');
+  await runToTasks('retail', 'staff');
+  await proceedThroughDetails(37, ['レジ対応・会計'], async () => {
+    await setDetail('レジ対応・会計', { time: '1〜3時間', pain: 'つらい' });
+  });
+  await setReasons('レジ対応・会計', [REASON('判断が難しい・迷う')], 'ヒミツの自由記述テキスト12345');
+  await page.click('#screen-reasons button:last-child');
+  {
+    const code = await page.$eval('#result-code', el => el.value);
+    const decoded = await page.evaluate((c) => JSON.stringify(parseResultCode(c)), code);
+    check('デコードしたペイロードに勤務時間(37)が含まれない', !decoded.includes('37'));
+    check('デコードしたペイロードに自由記述が含まれない', !decoded.includes('ヒミツ'));
+  }
+
+  // --- Scenario 13: 不正なコードが件数付きで除外される ---
+  console.log('--- Scenario 13: 業種違い・版違い・壊れたコード・重複が除外され件数表示される ---');
+  // コードは個人を識別する情報を持たないため、同じ入力なら同じコードになる（仕様通り）。
+  // 「意図しない偶然の重複」と「意図した重複」を区別するため、5人分は時間・つらさを少しずつ変える。
+  const distinctInputs = [
+    { time: '1〜3時間', pain: 'つらい' },
+    { time: '3〜5時間', pain: 'つらい' },
+    { time: '5時間以上', pain: 'つらい' },
+    { time: '1〜3時間', pain: 'ややつらい' },
+    { time: '30分〜1時間', pain: 'つらい' },
+  ];
+  const validCodes = [];
+  for (const input of distinctInputs) {
+    await runToTasks('retail', 'staff');
+    await proceedThroughDetails(20, ['レジ対応・会計'], async () => {
+      await setDetail('レジ対応・会計', input);
+    });
+    await setReasons('レジ対応・会計', [REASON('判断が難しい・迷う')]);
+    await page.click('#screen-reasons button:last-child');
+    validCodes.push(await page.$eval('#result-code', el => el.value));
+  }
+
+  await runToTasks('office', 'staff');
+  await proceedThroughDetails(20, ['書類の作成・印刷'], async () => {
+    await setDetail('書類の作成・印刷', { time: '1〜3時間', pain: 'つらい' });
+  });
+  await setReasons('書類の作成・印刷', [REASON('同じ内容を何度も書く・入力する')]);
+  await page.click('#screen-reasons button:last-child');
+  const wrongIndustryCode = await page.$eval('#result-code', el => el.value);
+
+  const brokenCode = 'SK1-これは壊れたコードです';
+
+  const wrongVersionCode = await page.evaluate((c) => {
+    const payload = parseResultCode(c);
+    payload.d = payload.d + 999;
+    return RESULT_CODE_PREFIX + base64UrlEncode(JSON.stringify(payload));
+  }, validCodes[0]);
+
+  await page.goto(aggUrl, { waitUntil: 'load' });
+  const allLines = [...validCodes, wrongIndustryCode, brokenCode, wrongVersionCode, validCodes[0]];
+  await page.type('#code-input', allLines.join('\n'));
+  await page.click('.card button');
+  {
+    const errorsText = await page.$eval('#agg-errors', el => el.innerText);
+    check('読み取れないコードの件数が表示される', errorsText.includes('読み取れないコードが1件'));
+    check('業種違いの件数が表示される', errorsText.includes('業種が異なるコードが1件'));
+    check('古い版の件数が表示される', errorsText.includes('古い版のコードが1件'));
+    check('重複コードの件数が表示される', errorsText.includes('同じコードが1件重複'));
+    const display = await page.$eval('#agg-result-card', el => el.style.display);
+    check('有効な5件で結果が表示される', display === 'block');
+  }
+
   await browser.close();
 
   console.log(`\n${failures === 0 ? 'ALL PASS' : failures + ' FAILURE(S)'}`);
