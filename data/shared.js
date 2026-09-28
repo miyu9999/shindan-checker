@@ -1,4 +1,4 @@
-// シゴト健診: index.html（個人診断）と aggregate.html（職場集計）の共通定義。
+// シゴト負荷チェック: index.html（個人チェック）と aggregate.html（職場集計）の共通定義。
 // 読み込み順は industries.js → shared.js → 各画面のスクリプト（COMMON_CATEGORY・DATA_VERSIONを参照するため）。
 
 const HOURS_OPTIONS = [

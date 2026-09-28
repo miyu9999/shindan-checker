@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>シゴト健診</title>
+<title>シゴト負荷チェック</title>
 <link rel="stylesheet" href="styles.css">
 <script data-goatcounter="https://miyu9999.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 
-<h1><span class="logo-mark">🩺</span>シゴト健診</h1>
+<h1><span class="logo-mark">📋</span>シゴト負荷チェック</h1>
 <p class="sub">自分の業務を選ぶだけで、負荷がどこに集中しているかがわかります。所要時間3〜5分。</p>
 
 <!-- Screen: Intro -->
 <div class="screen active" id="screen-intro">
   <div class="card">
-    <p>業種を選んで、自分がやっている業務にチェックを入れるだけの簡易診断です。原因を自分で判断する必要はありません。</p>
+    <p>業種を選んで、自分がやっている業務にチェックを入れるだけの簡易チェックです。原因を自分で判断する必要はありません。</p>
     <p>入力した内容はこの画面の中だけで処理され、どこにも送信・保存されません。</p>
     <button onclick="goToIndustry()">はじめる</button>
   </div>
@@ -96,7 +96,7 @@
     <div id="task-reasons"></div>
     <div style="margin-top:16px;">
       <button class="secondary" onclick="goTo('screen-details')">戻る</button>
-      <button onclick="showResult()">診断結果を見る</button>
+      <button onclick="showResult()">チェック結果を見る</button>
     </div>
   </div>
 </div>
@@ -104,7 +104,7 @@
 <!-- Screen: Result -->
 <div class="screen" id="screen-result">
   <div class="card">
-    <h2>診断結果</h2>
+    <h2>チェック結果</h2>
     <div id="result-main"></div>
 
     <h3>負荷が大きい業務 上位5つ</h3>
@@ -131,7 +131,8 @@
   <div style="margin-top:12px;">
     <button class="secondary" onclick="restart()">最初からやり直す</button>
   </div>
-  <p class="disclaimer">この結果は簡易的な参考情報であり、専門的な診断に代わるものではありません。時間は概算で答えたものなので、断定的な判断材料としては使わないでください。</p>
+  <p class="disclaimer">心身の不調が続く場合は、医療機関、社内の産業医・保健師、厚生労働省の相談窓口「<a href="https://kokoro.mhlw.go.jp/" target="_blank" rel="noopener">こころの耳</a>」などに相談してください。</p>
+  <p class="disclaimer">このチェックは医学的な診断や、心身の健康状態の評価ではありません。業務の負荷の偏りを整理するための参考情報です。時間は概算で答えたものなので、断定的な判断材料としては使わないでください。</p>
 </div>
 
 <script src="data/industries.js"></script>
@@ -483,7 +484,7 @@ function renderOvertimeAndDuplicate(results) {
     overtimeHtml = `
       <h3>時間内に終わらず、時間外にやっている業務</h3>
       <div class="result-box warn">
-        <p>勤務時間外の作業は、本来は労働時間として扱われるべきものです。</p>
+        <p>勤務時間外の作業は、労働時間に当たる可能性があります。</p>
         <ul class="plain-list">${overtimeTasks.map(r => `<li>${r.name}（週あたり目安 ${r.hours}時間）</li>`).join('')}</ul>
       </div>
     `;
